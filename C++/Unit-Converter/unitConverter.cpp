@@ -47,30 +47,40 @@ bool convertMass(const string& fromUnit,  // receives startingUnit
     return true;
 }
 
-bool convertTemp(const string& fromUnit,  // receives startingUnit
-                 const string& toUnit,    // receives endUnit
-                 double value,            // receives inputValue
-                 double& outNum) {        // receives convertedNum
-    if (lower(fromUnit) == "c" && lower(toUnit) == "f") {
-        outNum = (value * 9.0 / 5.0) + 32.0;
-        return true;
-    } else if (lower(fromUnit) == "f" && lower(toUnit) == "c") {
-        outNum = (value - 32.0) * 5.0 / 9.0;
-        return true;
-    } else if (lower(fromUnit) == "c" && lower(toUnit) == "k") {
-        outNum = value + 273.15;
-        return true;
-    } else if (lower(fromUnit) == "k" && lower(toUnit) == "c") {
-        outNum = value - 273.15;
-        return true;
-    } else if (lower(fromUnit) == "f" && lower(toUnit) == "k") {
-        outNum = (value - 32.0) * 5.0 / 9.0 + 273.15;
-        return true;
-    } else if (lower(fromUnit) == "k" && lower(toUnit) == "f") {
-        outNum = (value - 273.15) * 9.0 / 5.0 + 32.0;
-        return true;
+bool convertTemp(const string& fromUnit,
+                 const string& toUnit,
+                 double value,
+                 double& outNum) {
+
+    // Normalize inputs to lowercase
+    string from = lower(fromUnit);
+    string to = lower(toUnit);
+
+    // Lambdas to go to/from Kelvin
+    static const unordered_map<string, function<double(double)>> toKelvin = {
+        {"c", [](double v) { return v + 273.15; }},
+        {"f", [](double v) { return (v - 32.0) * 5.0 / 9.0 + 273.15; }},
+        {"k", [](double v) { return v; }}
+    };
+
+    static const unordered_map<string, function<double(double)>> fromKelvin = {
+        {"c", [](double v) { return v - 273.15; }},
+        {"f", [](double v) { return (v - 273.15) * 9.0 / 5.0 + 32.0; }},
+        {"k", [](double v) { return v; }}
+    };
+
+    // Find converters
+    auto fInput = toKelvin.find(from);
+    auto tInput = fromKelvin.find(to);
+
+    if (fInput == toKelvin.end() || tInput == fromKelvin.end()) {
+        return false; // invalid unit
     }
-    return false;
+
+    // Convert: input → Kelvin → target
+    double kelvin = fInput->second(value);
+    outNum = tInput->second(kelvin);
+    return true;
 }
 
 int main() {
