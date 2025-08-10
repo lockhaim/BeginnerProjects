@@ -1,4 +1,5 @@
 #include <iostream>
+#include <functional>
 #include <unordered_map>
 #include <string>
 #include <algorithm> // transform
@@ -83,119 +84,77 @@ bool convertTemp(const string& fromUnit,
     return true;
 }
 
-int main() {
-    auto inputValue = 0.0;
-    string unitType;
-    double convertedNum;
-    string startingUnit;
-    string endUnit;
-    string backToStart;
-
-    cout << "Welcome to the Unit Converter!" << endl;
-
-    cout << "What Type of Units are you Using? Enter 'length', 'mass', or 'temp':" << endl;
-    cin >> unitType;
-
-    if(unitType == "length") {
-        //Length
-
-        cout << "Enter the units you are converting FROM (mm, cm, m, km, in, ft, yd, mi):" << endl;
-        cin >> startingUnit;
-
-        cout << "Enter the length please:";
-        cin >> inputValue;
-
-        cout << "Enter the units you are converting TO (mm, cm, m, km, in, ft, yd, mi):" << endl;
-        cin >> endUnit;
-
-        cout << "Converting " << inputValue << " " << startingUnit << " to " << endUnit << "..." << endl;
-        //conversion function
-        if (convertLength(startingUnit, endUnit, inputValue, convertedNum)) {
-            cout << "The converted length is: " << convertedNum << " " << endUnit << endl;
-        } else {
-            cout << "Invalid units entered for length conversion." << endl;
-        }
-
-        cout << endl;
-        
-        cout << "Would you like to perform another conversion? (yes/no)" << endl;
-        
-        cin >> backToStart;
-        cout << endl;
-
-        if (lower(backToStart) == "yes") {
-            main();
-        } else if (lower(backToStart) == "no") {
-            return 0;
-        }
+//dispatcher
+bool convert(const string& type, const string& from, const string& to, double value, double& out) {
+    string t = lower(type);
+    if (t == "length" || t == "l") return convertLength(from, to, value, out);
+    if (t == "mass"   || t == "m") return convertMass(from, to, value, out);
+    if (t == "temp"   || t == "t") return convertTemp(from, to, value, out);
+    return false;
+}
 
 
-    } else if(unitType == "mass") {
-        //Mass
-        cout << "Enter the units you are converting FROM (mg, g, kg, lb, oz):" << endl;
-        cin >> startingUnit;
-
-        cout << "Enter the mass please:";
-        cin >> inputValue;
-
-        cout << "Enter the units you are converting TO (mg, g, kg, lb, oz):" << endl;
-        cin >> endUnit;
-
-        cout << "Converting " << inputValue << " " << startingUnit << " to " << endUnit << "..." << endl;
-        //conversion function
-        if (convertMass(startingUnit, endUnit, inputValue, convertedNum)) {
-            cout << "The converted mass is: " << convertedNum << " " << endUnit << endl;
-        } else {
-            cout << "Invalid units entered for mass conversion." << endl;
-        }
-
-        cout << endl;
-        cout << "Would you like to perform another conversion? (yes/no)" << endl;
-
-        cin >> backToStart;
-        cout << endl;
-
-        if (lower(backToStart) == "yes") {
-            main();
-        } else if (lower(backToStart) == "no") {
-            return 0;
-        }
+//-h --help info from CLI
+void print_help(const char* prog) {
+    cerr <<
+    "Usage:\n"
+    "  " << prog << " <type> <value> <from_unit> <to_unit>\n"
+    "    type: length|mass|temp (or l|m|t)\n"
+    "    examples:\n"
+    "      " << prog << " length 2.5 km m\n"
+    "      " << prog << " mass 12 oz g\n"
+    "      " << prog << " temp 72 f c\n"
+    "\nIf no arguments are provided, interactive mode starts.\n";
+}
 
 
-    } else if(unitType == "temp") {
-        //Temperature
-        cout << "Is the temperature in F, C, or K?" << endl;
-        cin >> startingUnit;
+int main(int argc, char** argv) {
+    ios::sync_with_stdio(false);
 
-        cout << "Enter the temperature please:" << endl;
-        cin >> inputValue;
-
-        cout << "Enter the units you are converting TO (F, C, K):" << endl;
-        cin >> endUnit;
-
-        cout << "Converting " << inputValue << " " << startingUnit << " to " << endUnit << "..." << endl;
-        //conversion function
-        if (convertTemp(startingUnit, endUnit, inputValue, convertedNum)) {
-            cout << "The converted temperature is: " << convertedNum << " " << endUnit << endl;
-        } else {
-            cout << "Invalid units entered for temperature conversion." << endl;
-        }
-
-        cout << endl;
-        cout << "Would you like to perform another conversion? (yes/no)" << endl;
-
-        cin >> backToStart;
-        cout << endl;
-
-        if (lower(backToStart) == "yes") {
-            main();
-        } else if (lower(backToStart) == "no") {
-            return 0;
-        }
-
+    if (argc == 2 && (string(argv[1]) == "-h" || string(argv[1]) == "--help")) {
+        print_help(argv[0]);
+        return 0;
     }
 
+    
+    string type, fromU, toU;
+    double value = 0.0, result = 0.0;
 
 
+    if (argc == 5) {
+        // CLI mode: program type value from to
+        type = argv[1];
+        try {
+            value = stod(argv[2]);
+        } catch (...) {
+            cerr << "Invalid number: " << argv[2] << "\n";
+            return 2;
+        }
+        fromU = argv[3];
+        toU   = argv[4];
+
+        if (!convert(type, fromU, toU, value, result)) {
+            cerr << "Conversion failed. Check type/units. Use -h for help.\n";
+            return 1;
+        }
+        cout << value << " " << fromU << " = " << result << " " << toU << "\n";
+        return 0;
+    }
+
+   // Interactive fallback
+    cout << "Type (length|mass|temp): ";
+    cin >> type;
+    cout << "Value: ";
+    if (!(cin >> value)) { cerr << "Invalid number.\n"; return 2; }
+    cout << "From unit: ";
+    cin >> fromU;
+    cout << "To unit: ";
+    cin >> toU;
+
+    if (!convert(type, fromU, toU, value, result)) {
+        cerr << "Conversion failed. Try -h for usage and supported units.\n";
+        return 1;
+    }
+    cout << value << " " << fromU << " = " << result << " " << toU << "\n";
     return 0;
 }
